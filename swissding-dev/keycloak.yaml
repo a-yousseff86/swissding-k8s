@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: swissding-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:25.0.1
+          args: ['start-dev', '--import-realm']
+          env:
+            - name: KC_DB
+              value: dev-file
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: admin
+            - name: KC_FEATURES
+              value: scripts
+            - name: KC_HTTP_PORT
+              value: '9080'
+            - name: KC_HTTPS_PORT
+              value: '9443'
+            - name: KC_HEALTH_ENABLED
+              value: 'true'
+            - name: KC_HTTP_MANAGEMENT_PORT
+              value: '9990'
+          ports:
+            - containerPort: 9080
+            - containerPort: 9443
+            - containerPort: 9990
+          volumeMounts:
+            - mountPath: /opt/keycloak/data/import
+              name: realm-config
+            - mountPath: /opt/keycloak/health-check.sh
+              name: health-check
+              subPath: health-check.sh
+          readinessProbe:
+            exec:
+              command: ['bash', '/opt/keycloak/health-check.sh']
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 40
+      volumes:
+        - name: realm-config
+          hostPath:
+            path: ./realm-config
+        - name: health-check
+          hostPath:
+            path: ./realm-config/keycloak-health-check.sh
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: swissding-dev
+spec:
+  ports:
+    - name: http
+      targetPort: 9080
+      port: 9080
+    - name: https
+      port: 9443
+      targetPort: 9443
+  selector:
+    app: keycloak
+  type: ClusterIP

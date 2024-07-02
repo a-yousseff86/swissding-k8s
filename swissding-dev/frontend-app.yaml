@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swissding-client-app
+  namespace: swissding-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swissding-client-app
+  template:
+    metadata:
+      labels:
+        app: swissding-client-app
+    spec:
+      containers:
+        - name: swissding
+          image: public.ecr.aws/g4z8v6e1/swissding-client-app:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swissding-client-app-service
+  namespace: swissding-dev
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+  selector:
+    app: swissding-client-app
+  type: NodePort
